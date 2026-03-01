@@ -1,12 +1,8 @@
-# 🦷 DentalCare Pro
+🦷 DentalCare Pro
 
 A complete admin-based Dentist Appointment & Patient Management System built with Flask + SQLite.
 
----
-
-## 🚀 Quick Start
-
-```bash
+🚀 Quick Start
 # 1. Install dependencies
 pip install -r requirements.txt
 
@@ -15,86 +11,71 @@ python app.py
 
 # 3. Open in browser
 http://localhost:5000
-```
 
-On first run, you'll be redirected to the **Register** page to create your admin account.
-No default credentials — you set your own secure password.
+On first run, you’ll be redirected to the Register page to create your admin account.
+There are no default credentials — you set your own secure password.
 
----
+📌 Features
 
-## 📁 Project Structure
+Admin Authentication System
 
-```
-dental_app/
-├── app.py                    ← All Flask routes & models
+Secure Registration (Strong Password Enforcement)
+
+Patient Management (Add / Edit / Delete)
+
+Appointment Scheduling (Today + Upcoming)
+
+Payment Recording System
+
+Earnings Dashboard
+
+Real-time Password Strength Meter
+
+Dark / Light Mode (Saved in localStorage)
+
+Optional SMS Reminder Integration (Twilio)
+
+📁 Project Structure
+├── app.py
 ├── requirements.txt
-├── dental.db                 ← SQLite DB (auto-created)
 ├── static/
-│   ├── css/style.css         ← Full styles + dark/light mode
-│   └── js/main.js            ← Theme toggle + utilities
+│   ├── css/style.css
+│   └── js/main.js
 └── templates/
-    ├── base.html             ← Navbar + layout
-    ├── login.html            ← Login page
-    ├── register.html         ← Register with password strength meter
-    ├── dashboard.html        ← Dashboard with stats
-    ├── patients.html         ← Patient list + search
-    ├── patient_form.html     ← Add/Edit patient
-    ├── patient_detail.html   ← Patient profile + Add Payment section
-    ├── appointments.html     ← Today + upcoming + filter
-    ├── appointment_form.html ← Add/Edit appointment (today bug fixed)
-    └── earnings.html         ← Earnings + payment log
-```
 
----
+SQLite database is auto-created on first run.
 
-## ✅ What's Fixed / New
+🔐 Password Requirements
 
-| Issue | Fix |
-|-------|-----|
-| `today is undefined` in new appointment | Passes `today` in every GET route |
-| No default admin | First visit → Register page, set your own password |
-| Weak auth | Strong password enforced: 8+ chars, uppercase, lowercase, digit, special char |
-| Register page | Full registration with real-time password strength meter |
-| No quick payment | **Add Payment** section directly on patient profile page |
-| Payment history | Every payment saved with date, note, timestamp |
-| Delete payment | Can remove incorrect payment entries |
+Minimum 8 characters
 
----
+At least one uppercase letter
 
-## 💳 Adding Payments (New Feature)
+At least one lowercase letter
 
-1. Go to any patient's profile page
-2. Scroll to **"Record New Payment"** section
-3. Enter amount + date + optional note → **Save Payment**
-4. Full payment history shown below with delete option
-5. Remaining balance auto-updates
+At least one digit
 
----
+At least one special character
 
-## 🔐 Password Requirements
+💳 Payment System
 
-When registering, your password must have:
-- ✅ At least 8 characters
-- ✅ One uppercase letter (A-Z)
-- ✅ One lowercase letter (a-z)
-- ✅ One number (0-9)
-- ✅ One special character (!@#$%^&* etc.)
+Record payments directly from patient profile
 
-A real-time strength meter guides you as you type.
+Auto-updated remaining balance
 
----
+Payment history log
 
-## 📲 SMS Reminders (Twilio)
+Delete incorrect entries
 
-```bash
+📲 Optional SMS Reminder Setup
 pip install twilio
-export TWILIO_ACCOUNT_SID="ACxxxxxxxx"
-export TWILIO_AUTH_TOKEN="your_token"
-export TWILIO_PHONE_NUMBER="+1XXXXXXXXXX"
-```
 
----
+Set environment variables:
 
-## 🌗 Dark / Light Mode
+TWILIO_ACCOUNT_SID
+TWILIO_AUTH_TOKEN
+TWILIO_PHONE_NUMBER
+🌗 Dark / Light Mode
 
-Click the 🌙 moon icon in the navbar. Preference is saved in `localStorage`.
+Click the 🌙 icon in the navbar.
+Theme preference is stored locally.
