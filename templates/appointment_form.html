@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Appointment – DentalCare Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-calendar-{{ 'plus' if action=='Add' else 'edit' }}"></i> {{ action }} Appointment</h1>
+  <a href="{{ url_for('appointments') }}" class="btn btn-outline">
+    <i class="fas fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="form-card">
+  <form method="POST" novalidate>
+    <div class="form-grid">
+
+      <!-- Patient -->
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> Patient <span class="required">*</span></label>
+        <select name="patient_id" id="patient-sel" required onchange="onPatientChange()">
+          <option value="">Select patient…</option>
+          {% for p in patients %}
+          <option value="{{ p.id }}" data-phone="{{ p.phone }}" data-remaining="{{ '%.2f'|format(p.remaining_amount) }}"
+            {{ 'selected' if appointment and appointment.patient_id == p.id }}>
+            {{ p.full_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Phone display -->
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> Patient Phone</label>
+        <div class="phone-display" id="phone-display">
+          {% if appointment %}
+            <a href="tel:{{ appointment.patient.phone }}" class="tel-link large">
+              <i class="fas fa-phone-alt"></i> {{ appointment.patient.phone }}
+            </a>
+          {% else %}
+            <span class="text-muted">Select a patient first</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Date -->
+      <div class="form-group">
+        <label><i class="fas fa-calendar"></i> Date <span class="required">*</span></label>
+        <input type="date" name="appointment_date" required
+               value="{{ appointment.appointment_date.strftime('%Y-%m-%d') if appointment else today.strftime('%Y-%m-%d') }}">
+      </div>
+
+      <!-- Time -->
+      <div class="form-group">
+        <label><i class="fas fa-clock"></i> Time <span class="required">*</span></label>
+        <input type="time" name="appointment_time" required
+               value="{{ appointment.appointment_time.strftime('%H:%M') if appointment else '' }}">
+      </div>
+
+      <!-- Treatment suggestion -->
+      <div class="form-group full-width">
+        <label><i class="fas fa-tooth"></i> Treatment</label>
+        <div class="treatment-group">
+          <select name="treatment_suggestion" id="treatment-sel" onchange="toggleCustom()">
+            <option value="">Select treatment…</option>
+            {% set opts = ['Cleaning','Filling','Root Canal','Braces','Extraction','Checkup','Whitening','Custom'] %}
+            {% for t in opts %}
+            <option value="{{ t }}"
+              {{ 'selected' if appointment and (
+                  appointment.treatment_suggestion == t or
+                  (t == 'Custom' and appointment.treatment_suggestion and appointment.treatment_suggestion not in opts[:-1])
+              ) }}>{{ t }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="custom_treatment" id="custom-input"
+                 placeholder="Describe custom treatment…" style="display:none"
+                 value="{{ appointment.treatment_suggestion if appointment and appointment.treatment_suggestion and appointment.treatment_suggestion not in ['Cleaning','Filling','Root Canal','Braces','Extraction','Checkup','Whitening',''] else '' }}">
+        </div>
+      </div>
+
+      <!-- Work to be done -->
+      <div class="form-group full-width">
+        <label><i class="fas fa-notes-medical"></i> Work to be Done</label>
+        <textarea name="work_to_be_done" rows="3" placeholder="Describe the work to be done…">{{ appointment.work_to_be_done if appointment else '' }}</textarea>
+      </div>
+
+      <!-- Status -->
+      <div class="form-group">
+        <label><i class="fas fa-tasks"></i> Status</label>
+        <select name="status">
+          {% for s in ['Scheduled','Completed','Cancelled'] %}
+          <option value="{{ s }}"
+            {{ 'selected' if (appointment and appointment.status == s) or (not appointment and s == 'Scheduled') }}>
+            {{ s }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Payment collected -->
+      <div class="form-group">
+        <label><i class="fas fa-rupee-sign"></i> Payment Collected (₹)</label>
+        <input type="number" name="payment_collected" min="0" step="0.01"
+               value="{{ appointment.payment_collected if appointment else 0 }}" placeholder="0.00">
+        <small class="field-hint" id="remaining-hint"></small>
+      </div>
+
+      <!-- Notes -->
+      <div class="form-group full-width">
+        <label><i class="fas fa-sticky-note"></i> Notes</label>
+        <textarea name="notes" rows="2" placeholder="Additional notes…">{{ appointment.notes if appointment else '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a href="{{ url_for('appointments') }}" class="btn btn-outline">Cancel</a>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> {{ action }} Appointment
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function onPatientChange() {
+  const sel   = document.getElementById('patient-sel');
+  const opt   = sel.options[sel.selectedIndex];
+  const phone = opt.dataset.phone || '';
+  const rem   = opt.dataset.remaining || '';
+  const disp  = document.getElementById('phone-display');
+  const hint  = document.getElementById('remaining-hint');
+
+  disp.innerHTML = phone
+    ? `<a href="tel:${phone}" class="tel-link large"><i class="fas fa-phone-alt"></i> ${phone}</a>`
+    : '<span class="text-muted">Select a patient first</span>';
+
+  hint.textContent = rem ? `Patient's outstanding balance: ₹${rem}` : '';
+}
+
+function toggleCustom() {
+  const sel = document.getElementById('treatment-sel');
+  const inp = document.getElementById('custom-input');
+  const show = sel.value === 'Custom';
+  inp.style.display = show ? 'block' : 'none';
+  inp.required = show;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  toggleCustom();
+  // Auto-set time to next round hour if empty
+  const timeInp = document.querySelector('input[type="time"]');
+  if (timeInp && !timeInp.value) {
+    const d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0);
+    timeInp.value = String(d.getHours()).padStart(2,'0') + ':00';
+  }
+});
+</script>
+{% endblock %}

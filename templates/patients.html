@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Patients – DentalCare Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-users"></i> Patients</h1>
+  <a href="{{ url_for('add_patient') }}" class="btn btn-primary">
+    <i class="fas fa-user-plus"></i> Add Patient
+  </a>
+</div>
+
+<div class="search-bar">
+  <form method="GET">
+    <div class="search-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" name="search" value="{{ search }}"
+             placeholder="Search by name or phone…" autofocus>
+      {% if search %}<a href="{{ url_for('patients') }}" class="search-clear"><i class="fas fa-times"></i></a>{% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+</div>
+
+{% if patients %}
+<div class="table-responsive">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th><th>Name</th><th>Phone</th><th>Age/Gender</th>
+        <th>Treatment</th><th>Total</th><th>Paid</th><th>Remaining</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in patients %}
+      <tr>
+        <td class="text-muted">{{ loop.index }}</td>
+        <td>
+          <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="patient-link">
+            <i class="fas fa-user-circle"></i> {{ p.full_name }}
+          </a>
+        </td>
+        <td><a href="tel:{{ p.phone }}" class="tel-link"><i class="fas fa-phone"></i> {{ p.phone }}</a></td>
+        <td>{{ p.age or '—' }} / {{ p.gender or '—' }}</td>
+        <td>{{ p.treatment_type or '—' }}</td>
+        <td>₹{{ "%.2f"|format(p.total_cost or 0) }}</td>
+        <td class="text-green">₹{{ "%.2f"|format(p.amount_paid or 0) }}</td>
+        <td>
+          <span class="{{ 'text-red' if p.remaining_amount > 0 else 'text-green' }}">
+            ₹{{ "%.2f"|format(p.remaining_amount) }}
+          </span>
+        </td>
+        <td>
+          <div class="action-group">
+            <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="btn btn-xs btn-outline" title="View">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('edit_patient', patient_id=p.id) }}" class="btn btn-xs btn-edit" title="Edit">
+              <i class="fas fa-edit"></i>
+            </a>
+            <form method="POST" action="{{ url_for('delete_patient', patient_id=p.id) }}"
+                  onsubmit="return confirm('Delete {{ p.full_name }}? This will also remove all appointments and payment records.')">
+              <button type="submit" class="btn btn-xs btn-danger" title="Delete">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state large">
+  <i class="fas fa-user-slash"></i>
+  <p>{{ 'No patients found for "' ~ search ~ '"' if search else 'No patients yet.' }}</p>
+  {% if not search %}
+  <a href="{{ url_for('add_patient') }}" class="btn btn-primary mt-1">
+    <i class="fas fa-user-plus"></i> Add First Patient
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

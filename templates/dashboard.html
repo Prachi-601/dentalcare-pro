@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – DentalCare Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+    <p class="subtitle">{{ today.strftime('%A, %B %d, %Y') }} — {{ current_user.clinic_name }}</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('add_patient') }}" class="btn btn-outline">
+      <i class="fas fa-user-plus"></i> Add Patient
+    </a>
+    <a href="{{ url_for('add_appointment') }}" class="btn btn-primary">
+      <i class="fas fa-calendar-plus"></i> New Appointment
+    </a>
+  </div>
+</div>
+
+<!-- Revenue Cards -->
+<div class="cards-grid">
+  <div class="card revenue-card">
+    <div class="card-icon green"><i class="fas fa-calendar-day"></i></div>
+    <div class="card-info">
+      <span class="card-label">Today's Income</span>
+      <span class="card-value">₹{{ "%.2f"|format(today_income) }}</span>
+    </div>
+  </div>
+  <div class="card revenue-card">
+    <div class="card-icon blue"><i class="fas fa-chart-line"></i></div>
+    <div class="card-info">
+      <span class="card-label">Monthly Income</span>
+      <span class="card-value">₹{{ "%.2f"|format(monthly_income) }}</span>
+    </div>
+  </div>
+  <div class="card revenue-card">
+    <div class="card-icon orange"><i class="fas fa-clock"></i></div>
+    <div class="card-info">
+      <span class="card-label">Pending Payments</span>
+      <span class="card-value">₹{{ "%.2f"|format(pending_payments) }}</span>
+    </div>
+  </div>
+  <div class="card revenue-card">
+    <div class="card-icon purple"><i class="fas fa-users"></i></div>
+    <div class="card-info">
+      <span class="card-label">Total Patients</span>
+      <span class="card-value">{{ total_patients }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <!-- Today's Appointments -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-calendar-check"></i> Today's Appointments
+        <span class="badge badge-primary">{{ today_appointments|length }}</span>
+      </h2>
+      <a href="{{ url_for('add_appointment') }}" class="btn btn-sm btn-primary">
+        <i class="fas fa-plus"></i> New
+      </a>
+    </div>
+    {% if today_appointments %}
+    <div class="appt-list">
+      {% for appt in today_appointments %}
+      <div class="appt-row status-{{ appt.status.lower() }}">
+        <div class="appt-time">{{ appt.appointment_time.strftime('%I:%M %p') }}</div>
+        <div class="appt-info">
+          <strong>{{ appt.patient.full_name }}</strong>
+          <a href="tel:{{ appt.patient.phone }}" class="tel-link">
+            <i class="fas fa-phone-alt"></i> {{ appt.patient.phone }}
+          </a>
+          <small>{{ appt.treatment_suggestion or appt.work_to_be_done or '—' }}</small>
+        </div>
+        <span class="badge badge-{{ appt.status.lower() }}">{{ appt.status }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-calendar-times"></i><p>No appointments today</p></div>
+    {% endif %}
+  </div>
+
+  <!-- Upcoming Appointments -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-calendar-week"></i> Upcoming</h2>
+      <a href="{{ url_for('appointments') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    {% if upcoming_appointments %}
+    <div class="appt-list">
+      {% for appt in upcoming_appointments %}
+      <div class="appt-row">
+        <div class="appt-time">
+          <span>{{ appt.appointment_date.strftime('%b %d') }}</span>
+          <small>{{ appt.appointment_time.strftime('%I:%M %p') }}</small>
+        </div>
+        <div class="appt-info">
+          <strong>{{ appt.patient.full_name }}</strong>
+          <a href="tel:{{ appt.patient.phone }}" class="tel-link">
+            <i class="fas fa-phone-alt"></i> {{ appt.patient.phone }}
+          </a>
+          <small>{{ appt.treatment_suggestion or appt.work_to_be_done or '—' }}</small>
+        </div>
+        <button class="btn btn-xs btn-reminder" onclick="sendReminder({{ appt.id }},this)"
+                {% if appt.reminder_sent %}data-sent="true"{% endif %} title="Send SMS Reminder">
+          <i class="fas fa-{{ 'check' if appt.reminder_sent else 'bell' }}"></i>
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-calendar"></i><p>No upcoming appointments</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Recent Payments -->
+{% if recent_payments %}
+<div class="card">
+  <div class="card-header">
+    <h2><i class="fas fa-receipt"></i> Recent Payments</h2>
+    <a href="{{ url_for('earnings') }}" class="btn btn-sm btn-outline">View All</a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Patient</th><th>Amount</th><th>Note</th></tr></thead>
+      <tbody>
+        {% for p in recent_payments %}
+        <tr>
+          <td>{{ p.payment_date.strftime('%b %d, %Y') }}</td>
+          <td><a href="{{ url_for('patient_detail', patient_id=p.patient_id) }}" class="patient-link">{{ p.patient.full_name }}</a></td>
+          <td class="text-green"><strong>₹{{ "%.2f"|format(p.amount) }}</strong></td>
+          <td>{{ p.note or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function sendReminder(id, btn) {
+  if (btn.dataset.sent === 'true') { showToast('Reminder already sent!', 'info'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(`/api/send_reminder/${id}`, {method:'POST'})
+    .then(r=>r.json()).then(d => {
+      if (d.success) { btn.innerHTML='<i class="fas fa-check"></i>'; btn.dataset.sent='true'; btn.classList.add('sent'); showToast(d.message,'success'); }
+      else { btn.innerHTML='<i class="fas fa-bell"></i>'; btn.disabled=false; showToast('SMS Failed: '+d.message,'danger'); }
+    }).catch(()=>{ btn.innerHTML='<i class="fas fa-bell"></i>'; btn.disabled=false; });
+}
+</script>
+{% endblock %}

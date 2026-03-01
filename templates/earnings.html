@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Earnings – DentalCare Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="fas fa-coins"></i> Earnings & Financials</h1>
+    <p class="subtitle">{{ today.strftime('%B %Y') }}</p>
+  </div>
+</div>
+
+<div class="cards-grid">
+  <div class="card revenue-card">
+    <div class="card-icon green"><i class="fas fa-calendar-day"></i></div>
+    <div class="card-info">
+      <span class="card-label">Today's Income</span>
+      <span class="card-value">₹{{ "%.2f"|format(today_income) }}</span>
+    </div>
+  </div>
+  <div class="card revenue-card">
+    <div class="card-icon blue"><i class="fas fa-chart-line"></i></div>
+    <div class="card-info">
+      <span class="card-label">Monthly Income</span>
+      <span class="card-value">₹{{ "%.2f"|format(monthly_income) }}</span>
+    </div>
+  </div>
+  <div class="card revenue-card">
+    <div class="card-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+    <div class="card-info">
+      <span class="card-label">Pending Payments</span>
+      <span class="card-value">₹{{ "%.2f"|format(pending_payments) }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="earnings-grid">
+  <!-- Daily Breakdown -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-calendar-alt"></i> Daily Earnings – {{ today.strftime('%B %Y') }}</h2>
+    </div>
+    {% if daily_data %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Day</th><th>Income</th><th>Bar</th></tr></thead>
+        <tbody>
+          {% set max_val = daily_data | map(attribute='total') | max %}
+          {% for row in daily_data %}
+          <tr>
+            <td>{{ row.payment_date.strftime('%b %d, %Y') }}</td>
+            <td>{{ row.payment_date.strftime('%A') }}</td>
+            <td class="text-green"><strong>₹{{ "%.2f"|format(row.total) }}</strong></td>
+            <td>
+              <div class="mini-bar">
+                <div class="mini-bar-fill" style="width:{{ (row.total / max_val * 100)|int }}%"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-chart-bar"></i><p>No completed appointments this month</p></div>
+    {% endif %}
+  </div>
+
+  <!-- Pending Payments -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-clock"></i> Patients with Pending Payments</h2>
+    </div>
+    {% if patients_with_pending %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead><tr><th>Patient</th><th>Phone</th><th>Total</th><th>Paid</th><th>Pending</th><th></th></tr></thead>
+        <tbody>
+          {% for p in patients_with_pending %}
+          <tr>
+            <td><a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="patient-link">{{ p.full_name }}</a></td>
+            <td><a href="tel:{{ p.phone }}" class="tel-link"><i class="fas fa-phone"></i> {{ p.phone }}</a></td>
+            <td>₹{{ "%.2f"|format(p.total_cost or 0) }}</td>
+            <td class="text-green">₹{{ "%.2f"|format(p.amount_paid or 0) }}</td>
+            <td class="text-red"><strong>₹{{ "%.2f"|format(p.remaining_amount) }}</strong></td>
+            <td>
+              <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="btn btn-xs btn-primary">
+                <i class="fas fa-plus"></i> Pay
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-check-circle"></i><p>All payments are up to date!</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Monthly Payment Log -->
+<div class="card">
+  <div class="card-header">
+    <h2><i class="fas fa-receipt"></i> Payment Log – {{ today.strftime('%B %Y') }}</h2>
+  </div>
+  {% if monthly_payment_logs %}
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Patient</th><th>Amount</th><th>Note</th></tr></thead>
+      <tbody>
+        {% for log in monthly_payment_logs %}
+        <tr>
+          <td>{{ log.payment_date.strftime('%b %d, %Y') }}</td>
+          <td><a href="{{ url_for('patient_detail', patient_id=log.patient_id) }}" class="patient-link">{{ log.patient.full_name }}</a></td>
+          <td class="text-green"><strong>₹{{ "%.2f"|format(log.amount) }}</strong></td>
+          <td>{{ log.note or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2"><strong>Total this month</strong></td>
+          <td class="text-green"><strong>₹{{ "%.2f"|format(monthly_payment_logs|sum(attribute='amount')) }}</strong></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="fas fa-receipt"></i><p>No payments recorded this month</p></div>
+  {% endif %}
+</div>
+{% endblock %}

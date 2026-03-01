@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – DentalCare Pro</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="auth-body">
+<div class="auth-wrap">
+  <div class="auth-card auth-card-wide">
+    <div class="auth-header">
+      <div class="auth-logo"><i class="fas fa-tooth"></i></div>
+      <h1>Create Admin Account</h1>
+      <p>Set up your DentalCare Pro admin profile</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'info-circle' }}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="auth-form" id="reg-form" novalidate>
+      <div class="form-grid2">
+        <div class="form-group">
+          <label><i class="fas fa-user"></i> Username <span class="required">*</span></label>
+          <input type="text" name="username" value="{{ username }}" required
+                 placeholder="e.g. dr_smith" minlength="3" id="reg-username">
+          <small class="field-hint">Min. 3 characters</small>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-envelope"></i> Email <span class="required">*</span></label>
+          <input type="email" name="email" value="{{ email }}" required placeholder="admin@clinic.com">
+        </div>
+        <div class="form-group full-width">
+          <label><i class="fas fa-clinic-medical"></i> Clinic Name</label>
+          <input type="text" name="clinic_name" value="{{ clinic_name }}" placeholder="SmileCare Dental Clinic">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Password <span class="required">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" name="password" id="reg-pw" required
+                   placeholder="Create strong password" oninput="checkStrength(this.value)">
+            <button type="button" class="pw-eye" onclick="togglePw('reg-pw','eye2')">
+              <i class="fas fa-eye" id="eye2"></i>
+            </button>
+          </div>
+          <!-- Strength meter -->
+          <div class="strength-bar">
+            <div class="strength-fill" id="strength-fill"></div>
+          </div>
+          <small class="strength-label" id="strength-label">Enter a password</small>
+          <!-- Requirements checklist -->
+          <ul class="pw-reqs">
+            <li id="req-len">   <i class="fas fa-circle"></i> At least 8 characters</li>
+            <li id="req-upper"> <i class="fas fa-circle"></i> One uppercase letter (A-Z)</li>
+            <li id="req-lower"> <i class="fas fa-circle"></i> One lowercase letter (a-z)</li>
+            <li id="req-digit"> <i class="fas fa-circle"></i> One number (0-9)</li>
+            <li id="req-special"><i class="fas fa-circle"></i> One special character (!@#$% etc.)</li>
+          </ul>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Confirm Password <span class="required">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" name="confirm_password" id="reg-pw2" required
+                   placeholder="Repeat your password" oninput="checkMatch()">
+            <button type="button" class="pw-eye" onclick="togglePw('reg-pw2','eye3')">
+              <i class="fas fa-eye" id="eye3"></i>
+            </button>
+          </div>
+          <small class="field-hint" id="match-hint"></small>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="reg-submit">
+        <i class="fas fa-user-plus"></i> Create Account
+      </button>
+    </form>
+    <div class="auth-footer">
+      <p>Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<button class="theme-toggle float-theme" onclick="toggleTheme()" title="Toggle theme">
+  <i class="fas fa-moon" id="theme-icon"></i>
+</button>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+function checkStrength(pw) {
+  const fill  = document.getElementById('strength-fill');
+  const label = document.getElementById('strength-label');
+  const checks = {
+    'req-len':     pw.length >= 8,
+    'req-upper':   /[A-Z]/.test(pw),
+    'req-lower':   /[a-z]/.test(pw),
+    'req-digit':   /\d/.test(pw),
+    'req-special': /[!@#$%^&*(),.?":{}|<>_\-]/.test(pw),
+  };
+  let score = Object.values(checks).filter(Boolean).length;
+  Object.entries(checks).forEach(([id, ok]) => {
+    const el = document.getElementById(id);
+    el.classList.toggle('req-ok', ok);
+    el.classList.toggle('req-fail', !ok && pw.length > 0);
+  });
+  const levels = ['','weak','fair','good','strong','very-strong'];
+  const labels = ['','Weak 😟','Fair 😐','Good 👍','Strong 💪','Very Strong 🔒'];
+  fill.className = 'strength-fill ' + (levels[score] || '');
+  fill.style.width = (score * 20) + '%';
+  label.textContent = pw.length ? labels[score] : 'Enter a password';
+  label.className = 'strength-label ' + (levels[score] || '');
+}
+
+function checkMatch() {
+  const pw1 = document.getElementById('reg-pw').value;
+  const pw2 = document.getElementById('reg-pw2').value;
+  const hint = document.getElementById('match-hint');
+  if (!pw2) { hint.textContent = ''; return; }
+  if (pw1 === pw2) {
+    hint.textContent = '✓ Passwords match';
+    hint.style.color = 'var(--accent-green)';
+  } else {
+    hint.textContent = '✗ Passwords do not match';
+    hint.style.color = 'var(--accent-red)';
+  }
+}
+</script>
+</body>
+</html>
