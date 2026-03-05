@@ -64,7 +64,6 @@
           <td>
             <div class="action-group">
               <a href="{{ url_for('edit_appointment', appt_id=a.id) }}" class="btn btn-xs btn-edit"><i class="fas fa-edit"></i></a>
-              <button class="btn btn-xs btn-reminder" onclick="sendReminder({{ a.id }},this)" {% if a.reminder_sent %}data-sent="true"{% endif %}><i class="fas fa-bell"></i></button>
               <form method="POST" action="{{ url_for('delete_appointment', appt_id=a.id) }}" onsubmit="return confirm('Delete appointment?')">
                 <button type="submit" class="btn btn-xs btn-danger"><i class="fas fa-trash"></i></button>
               </form>
@@ -101,7 +100,6 @@
           <td>
             <div class="action-group">
               <a href="{{ url_for('edit_appointment', appt_id=a.id) }}" class="btn btn-xs btn-edit"><i class="fas fa-edit"></i></a>
-              <button class="btn btn-xs btn-reminder" onclick="sendReminder({{ a.id }},this)" {% if a.reminder_sent %}data-sent="true"{% endif %}><i class="fas fa-bell"></i></button>
               <form method="POST" action="{{ url_for('delete_appointment', appt_id=a.id) }}" onsubmit="return confirm('Delete appointment?')">
                 <button type="submit" class="btn btn-xs btn-danger"><i class="fas fa-trash"></i></button>
               </form>
@@ -159,16 +157,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-function sendReminder(id, btn) {
-  if (btn.dataset.sent === 'true') { alert('Reminder already sent!'); return; }
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  fetch(`/api/send_reminder/${id}`, {method:'POST'})
-    .then(r=>r.json()).then(d => {
-      if (d.success) { btn.innerHTML='<i class="fas fa-check"></i>'; btn.dataset.sent='true'; btn.classList.add('sent'); }
-      else { btn.innerHTML='<i class="fas fa-bell"></i>'; btn.disabled=false; alert('SMS Failed: '+d.message); }
-    }).catch(()=>{ btn.innerHTML='<i class="fas fa-bell"></i>'; btn.disabled=false; });
-}
-</script>
+
 {% endblock %}

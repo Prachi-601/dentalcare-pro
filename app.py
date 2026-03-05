@@ -7,7 +7,7 @@ from sqlalchemy import func
 import re, os, secrets
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = secrets.token_hex(32)
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dental.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -159,6 +159,14 @@ def register():
         errors = []
         if not username or len(username) < 3:
             errors.append('Username must be at least 3 characters.')
+
+        # Username cannot start with number
+        if username and username[0].isdigit():
+            errors.append('Username cannot start with a number.')
+
+        # Allow only letters, numbers and underscore
+        if username and not re.match(r'^[A-Za-z][A-Za-z0-9_]*$', username):
+            errors.append('Username can contain only letters, numbers, and underscore.')
         if Admin.query.filter_by(username=username).first():
             errors.append('Username already taken.')
         if not email or '@' not in email:
@@ -279,11 +287,26 @@ def patients():
 @login_required
 def add_patient():
     if request.method == 'POST':
+        full_name = request.form['full_name'].strip()
+        # Validation: patient name cannot contain numbers
+        if not re.match(r'^[A-Za-z ]+$', full_name):
+            flash("Patient name must contain only letters.", "danger")
+            return render_template('patient_form.html', patient=None, action='Add', form=request.form)
+        phone = request.form['phone'].strip()
+        if not re.match(r'^[6-9]\d{9}$', phone):
+            flash("Enter a valid 10 digit phone number.", "danger")
+            return render_template('patient_form.html', patient=None, action='Add', form=request.form)
+        age = request.form.get('age')
+
+        if age and (not age.isdigit() or int(age) <= 0 or int(age) > 120):
+            flash("Enter a valid age.", "danger")
+            return render_template('patient_form.html', patient=None, action='Add', form=request.form) 
+        age = int(age) if age else None
         patient = Patient(
             admin_id=current_user.id,
-            full_name    = request.form['full_name'].strip(),
-            phone        = request.form['phone'].strip(),
-            age          = request.form.get('age') or None,
+            full_name=full_name,
+            phone        = phone,
+            age          = age,
             gender       = request.form.get('gender'),
             address      = request.form.get('address', '').strip(),
             treatment_type = request.form.get('treatment_type', '').strip(),
@@ -318,9 +341,28 @@ def edit_patient(patient_id):
     admin_id=current_user.id
     ).first_or_404()
     if request.method == 'POST':
-        patient.full_name     = request.form['full_name'].strip()
-        patient.phone         = request.form['phone'].strip()
-        patient.age           = request.form.get('age') or None
+        full_name = request.form['full_name'].strip()
+        phone = request.form['phone'].strip()
+        age = request.form.get('age')
+
+        # Name validation
+        if not re.match(r'^[A-Za-z ]+$', full_name):
+            flash("Patient name must contain only letters.", "danger")
+            return render_template('patient_form.html', patient=patient, action='Edit', form=request.form)
+
+        # Phone validation
+        if not re.match(r'^[6-9]\d{9}$', phone):
+            flash("Enter a valid 10 digit phone number.", "danger")
+            return render_template('patient_form.html', patient=patient, action='Edit', form=request.form)
+
+        # Age validation
+        if age and (not age.isdigit() or int(age) <= 0 or int(age) > 120):
+            flash("Enter a valid age.", "danger")
+            return render_template('patient_form.html', patient=patient, action='Edit', form=request.form)
+
+        patient.full_name = full_name
+        patient.phone = phone
+        patient.age = int(age) if age else None
         patient.gender        = request.form.get('gender')
         patient.address       = request.form.get('address', '').strip()
         patient.treatment_type= request.form.get('treatment_type', '').strip()
@@ -371,6 +413,9 @@ def add_payment(patient_id):
     admin_id=current_user.id
     ).first_or_404()
     amount = float(request.form.get('amount') or 0)
+    if amount > patient.remaining_amount:
+        flash("Payment exceeds remaining balance.", "danger")
+        return redirect(url_for('patient_detail', patient_id=patient_id))
     note   = request.form.get('note', '').strip()
     pay_date_str = request.form.get('payment_date', '')
 
@@ -481,11 +526,59 @@ def add_appointment():
             treatment = request.form.get('custom_treatment', '').strip()
 
         payment = float(request.form.get('payment_collected') or 0)
+        appointment_date = datetime.strptime(request.form['appointment_date'], '%Y-%m-%d').date()
+        if appointment_date < date.today():
+            flash("Appointment date cannot be in the past.", "danger")
+            return render_template(
+                'appointment_form.html',
+                appointment=None,
+                patients=patients_list,
+                action='Add',
+                today=today,
+                form=request.form
+            )
+        appointment_time = datetime.strptime(request.form['appointment_time'], '%H:%M').time()
+        patient_id = request.form.get('patient_id')
+        if not patient_id:
+            flash("Please select a patient.", "danger")
+            return render_template(
+                'appointment_form.html',
+                appointment=None,
+                patients=patients_list,
+                action='Add',
+                today=today,
+                form=request.form
+            )
+
+        patient_id = int(patient_id)
+        existing_appt = Appointment.query.filter_by(
+            admin_id=current_user.id,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time
+        ).first()
+        if existing_appt:
+            flash("This time slot is already booked. Please choose another time.", "danger")
+            return render_template(
+                'appointment_form.html',
+                appointment=None,
+                patients=patients_list,
+                action='Add',
+                today=today,
+                form=request.form
+            )
+        same_day_appt = Appointment.query.filter_by(
+            admin_id=current_user.id,
+            patient_id=patient_id,
+            appointment_date=appointment_date
+        ).first()
+
+        if same_day_appt:
+            flash("⚠ This patient already has an appointment today. You can still add another if needed.", "warning")
         appt = Appointment(
             admin_id=current_user.id,
-            patient_id          = int(request.form['patient_id']),
-            appointment_date    = datetime.strptime(request.form['appointment_date'], '%Y-%m-%d').date(),
-            appointment_time    = datetime.strptime(request.form['appointment_time'], '%H:%M').time(),
+            patient_id = patient_id,
+            appointment_date = appointment_date,
+            appointment_time = appointment_time,
             work_to_be_done     = request.form.get('work_to_be_done', '').strip(),
             treatment_suggestion= treatment,
             status              = request.form.get('status', 'Scheduled'),
@@ -523,7 +616,9 @@ def edit_appointment(appt_id):
     admin_id=current_user.id
     ).first_or_404()
     today = date.today()                          # ← FIX: always pass today
-    patients_list = Patient.query.order_by(Patient.full_name).all()
+    patients_list = Patient.query.filter_by(
+    admin_id=current_user.id
+    ).order_by(Patient.full_name).all()
 
     if request.method == 'POST':
         treatment = request.form.get('treatment_suggestion', '')
@@ -618,7 +713,7 @@ def _send_sms_reminder(appointment):
         return {'success': False, 'message': 'Twilio credentials not configured.'}
     try:
         from twilio.rest import Client
-        admin = current_user
+        admin = Admin.query.get(appointment.admin_id)
         clinic = admin.clinic_name if admin else 'Dental Clinic'
         body = (f"Hello {appointment.patient.full_name}, reminder from {clinic}. "
                 f"Appointment on {appointment.appointment_date.strftime('%B %d, %Y')} "
